@@ -27,17 +27,17 @@ This is an educational portfolio project using synthetic anti-money-laundering d
 ## Application Screenshots
 
 ### Monitoring Dashboard
-![Monitoring Dashboard](screenshots\Moneitory_risk_cat_2.png)
-![Monitoring Dashboard](screenshots\Monitory_alert_insight_4.png)
-![Monitoring Dashboard](screenshots\Monitory_summery_1.png)
+![Monitoring Dashboard](screenshots/Moneitory_risk_cat_2.png)
+![Monitoring Dashboard](screenshots/Monitory_alert_insight_4.png)
+![Monitoring Dashboard](screenshots/Monitory_summery_1.png)
 
 ### Transaction Analysis
-![Transaction Analysis](screenshots\transaction-input.png)
-![Transaction Analysis](screenshots\transaction-result.png)
+![Transaction Analysis](screenshots/transaction-input.png)
+![Transaction Analysis](screenshots/transaction-result.png)
 
 ### Transaction History
 ![Transaction History](screenshots/Transaction_history_1.png)
-![Transaction History](screenshots\Transaction_history_2.png)
+![Transaction History](screenshots/Transaction_history_2.png)
 
 
 ## Technology Stack
