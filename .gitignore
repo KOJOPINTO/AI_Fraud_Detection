@@ -12,11 +12,20 @@ venv/
 # Secrets
 .env
 
-# Local data
+
+# Local data: do not publish raw datasets or private transaction history
+data/*
+!data/.gitkeep
+
+# Allow placeholder files for organized data folders
+!data/raw/
 data/raw/*
-data/processed/*
 !data/raw/.gitkeep
+
+!data/processed/
+data/processed/*
 !data/processed/.gitkeep
+
 
 # Model files
 models/*.pkl
