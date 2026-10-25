@@ -1,22 +1,34 @@
 
-from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-LOG_PATH = PROJECT_ROOT / "data" / "transaction_history.csv"
+from src.database import get_connection
+
+
+HISTORY_COLUMNS = [
+    "transaction_id",
+    "timestamp",
+    "amount_received",
+    "amount_paid",
+    "receiving_currency",
+    "payment_currency",
+    "payment_format",
+    "fraud_probability",
+    "prediction",
+    "risk_level",
+    "investigation_status",
+    "investigation_notes",
+]
 
 
 def log_transaction(transaction, result, amount_received, amount_paid):
-    """Save a transaction prediction to CSV."""
-
-    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    """Save a transaction prediction to PostgreSQL."""
 
     record = {
         "transaction_id": f"TXN-{uuid4().hex[:12].upper()}",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(timezone.utc),
         "amount_received": amount_received,
         "amount_paid": amount_paid,
         "receiving_currency": transaction["Receiving Currency"],
@@ -29,48 +41,137 @@ def log_transaction(transaction, result, amount_received, amount_paid):
         "investigation_notes": "",
     }
 
-    new_record = pd.DataFrame([record])
-    if LOG_PATH.exists():
-        existing_history = pd.read_csv(LOG_PATH)
-
-        combined_history = pd.concat(
-            [existing_history, new_record],
-            ignore_index=True
-        )
-
-        combined_history.to_csv(LOG_PATH, index=False)
-    else:
-        new_record.to_csv(LOG_PATH, index=False)
-    
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO transactions (
+                    transaction_id,
+                    transaction_time,
+                    amount,
+                    amount_received,
+                    amount_paid,
+                    receiving_currency,
+                    payment_currency,
+                    payment_format,
+                    fraud_probability,
+                    prediction,
+                    risk_level,
+                    investigation_status,
+                    investigation_notes
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s
+                )
+                """,
+                (
+                    record["transaction_id"],
+                    record["timestamp"],
+                    amount_received,
+                    amount_received,
+                    amount_paid,
+                    record["receiving_currency"],
+                    record["payment_currency"],
+                    record["payment_format"],
+                    record["fraud_probability"],
+                    record["prediction"],
+                    record["risk_level"],
+                    record["investigation_status"],
+                    record["investigation_notes"],
+                ),
+            )
 
 
 def load_transaction_history():
-    """Load previous predictions."""
+    """Load transaction history from PostgreSQL as a DataFrame."""
 
-    if LOG_PATH.exists():
-        history = pd.read_csv(LOG_PATH)
-
-        if "investigation_status" not in history.columns:
-            history["investigation_status"] = "New"
-        else:
-            history["investigation_status"] = (
-                history["investigation_status"].fillna("New")
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    transaction_id,
+                    transaction_time AS timestamp,
+                    amount_received,
+                    amount_paid,
+                    receiving_currency,
+                    payment_currency,
+                    payment_format,
+                    fraud_probability,
+                    prediction,
+                    risk_level,
+                    investigation_status,
+                    investigation_notes
+                FROM transactions
+                ORDER BY transaction_time DESC
+                """
             )
 
-        if "investigation_notes" not in history.columns:
-            history["investigation_notes"] = ""
-        else:
-            history["investigation_notes"] = (
-                history["investigation_notes"].fillna("")
-            )
+            rows = cur.fetchall()
 
-        return history
+    if not rows:
+        return pd.DataFrame(columns=HISTORY_COLUMNS)
 
-    return pd.DataFrame()
+    return pd.DataFrame(rows, columns=HISTORY_COLUMNS)
 
 
 def save_transaction_history(history):
-    """Save the updated transaction history to CSV."""
-    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    history.to_csv(LOG_PATH, index=False)
+    """Save investigation changes to existing PostgreSQL records."""
 
+    if history.empty:
+        return
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            for _, row in history.iterrows():
+                timestamp = row.get("timestamp")
+
+                if pd.isna(timestamp):
+                    timestamp = None
+                else:
+                    timestamp = pd.to_datetime(
+                        timestamp, utc=True
+                    ).to_pydatetime()
+
+                def clean(value):
+                    return None if pd.isna(value) else value
+
+                amount_received = clean(row.get("amount_received"))
+
+                cur.execute(
+                    """
+                    UPDATE transactions
+                    SET
+                        transaction_time = COALESCE(
+                            %s, transaction_time
+                        ),
+                        amount = COALESCE(%s, amount),
+                        amount_received = %s,
+                        amount_paid = %s,
+                        receiving_currency = %s,
+                        payment_currency = %s,
+                        payment_format = %s,
+                        fraud_probability = %s,
+                        prediction = %s,
+                        risk_level = %s,
+                        investigation_status = %s,
+                        investigation_notes = %s
+                    WHERE transaction_id = %s
+                    """,
+                    (
+                        timestamp,
+                        amount_received,
+                        amount_received,
+                        clean(row.get("amount_paid")),
+                        clean(row.get("receiving_currency")),
+                        clean(row.get("payment_currency")),
+                        clean(row.get("payment_format")),
+                        clean(row.get("fraud_probability")),
+                        clean(row.get("prediction")),
+                        clean(row.get("risk_level")),
+                        clean(row.get("investigation_status")) or "New",
+                        clean(row.get("investigation_notes")) or "",
+                        row["transaction_id"],
+                    ),
+                )

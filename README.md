@@ -49,7 +49,9 @@ This is an educational portfolio project using synthetic anti-money-laundering d
 | Machine learning | Transaction classification and risk scoring |
 | Streamlit | Interactive web application |
 | Git and GitHub | Version control and project documentation |
-| PostgreSQL | Planned database integration |
+| PostgreSQL | Persistent transaction storage and investigation records |
+| psycopg | Python-to-PostgreSQL database connectivity |
+| python-dotenv | Loading database configuration from environment variables |
 
 ## How It Works
 
@@ -62,17 +64,23 @@ This is an educational portfolio project using synthetic anti-money-laundering d
 ## Project Structure
 
 ```text
+## Project Structure
+
+```text
 AI_Fraud_Detection/
 ├── app.py
 ├── main.py
 ├── src/
 │   ├── predict.py
-│   └── transaction_log.py
+│   ├── transaction_log.py
+│   └── database.py
 ├── data/
 ├── models/
 ├── notebooks/
 │   └── exploratory_analysis.ipynb
+├── migrate_history.py
 ├── test_prediction.py
+├── test_database.py
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -115,6 +123,72 @@ python -m streamlit run app.py
 
 **Note:** Running the application from a fresh clone also requires the trained model artifact and any other runtime assets expected by the application. These must be made available through the project's documented setup process.
 
+## PostgreSQL Database Setup
+
+The application uses PostgreSQL to store transaction predictions and investigation records. Transaction history can be retrieved from the database, and investigation statuses and notes can be updated persistently.
+
+### 1. Install PostgreSQL
+
+Install PostgreSQL and create a database for the project.
+
+Example database name:
+
+```sql
+CREATE DATABASE fraud_detection_db;
+```
+
+The application expects a `transactions` table with fields for transaction details, prediction results, risk classifications, and investigation records.
+
+### 2. Configure environment variables
+
+Create a `.env` file in the project root:
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=fraud_detection_db
+DB_USER=postgres
+DB_PASSWORD=your_local_database_password
+```
+
+Replace the example password with your own local PostgreSQL password. Never commit `.env` or expose database credentials in source code.
+
+### 3. Install database dependencies
+
+```bash
+pip install "psycopg[binary]" python-dotenv
+```
+
+### 4. Test the database connection
+
+```bash
+python -m src.database
+```
+
+### 5. Migrate existing transaction history
+
+If you have an existing transaction-history CSV file and the required database table is already created, run:
+
+```bash
+python migrate_history.py
+```
+
+The migration script imports historical records into PostgreSQL. Existing transaction IDs are skipped to help avoid duplicate imports.
+
+### 6. Run the application
+
+```bash
+python -m streamlit run app.py
+```
+
+### 7. Run the database test
+
+```bash
+python test_database.py
+```
+
+**Important:** The commands above assume PostgreSQL is installed, the database and table have been created, `.env` is configured, and the project's runtime assets are available. The raw dataset, local transaction history, and database credentials should remain excluded from version control.
+
 ## Model Evaluation and Limitations
 
 Fraud detection is challenging because suspicious transactions are typically much less common than legitimate transactions.
@@ -127,11 +201,11 @@ The project uses synthetic data and has not been validated for deployment in a r
 
 ## Future Improvements
 
-- Integrate PostgreSQL for structured transaction storage.
-- Add database-backed investigation records and reporting.
-- Expand automated tests and error handling.
+-## Future Improvements
+
+- Expand automated tests and database error handling.
 - Improve model evaluation and threshold selection.
-- Add secure configuration and deployment practices.
+- Strengthen secure configuration and deployment practices.
 - Explore automated alerts and business workflow integrations.
 
 ## About the Developer
