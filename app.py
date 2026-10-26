@@ -586,7 +586,32 @@ elif page == "Transaction History":
             history["transaction_id"] == selected_notes_id
         ].iloc[0]
 
+
+
+        
         current_notes = selected_notes_row["investigation_notes"]
+        current_status = selected_notes_row["investigation_status"]
+
+        # Available investigation statuses
+        status_options = [
+            "New",
+            "Under Investigation",
+            "Resolved",
+            "Escalated"
+        ]
+
+        # Handle older or unexpected status values
+        if current_status not in status_options:
+            status_options.insert(0, current_status)
+
+        current_status_index = status_options.index(current_status)
+
+        new_status = st.selectbox(
+            "Investigation Status",
+            options=status_options,
+            index=current_status_index,
+            key=f"status_editor_{selected_notes_id}"
+        )
 
         new_notes = st.text_area(
             "Record investigation findings or actions",
@@ -599,18 +624,26 @@ elif page == "Transaction History":
             key=f"notes_editor_{selected_notes_id}"
         )
 
-        if st.button("Save Investigation Notes"):
+        if st.button("Save Investigation Update"):
+            selected_row_mask = (
+                history["transaction_id"] == selected_notes_id
+            )
+
             history.loc[
-                history["transaction_id"] == selected_notes_id,
+                selected_row_mask,
+                "investigation_status"
+            ] = new_status
+
+            history.loc[
+                selected_row_mask,
                 "investigation_notes"
             ] = new_notes
 
             save_transaction_history(history)
 
             st.success(
-                f"Investigation notes saved for transaction "
+                f"Investigation updated for transaction "
                 f"{selected_notes_id}."
             )
             st.rerun()
 
-    
