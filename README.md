@@ -4,7 +4,7 @@ An interactive machine learning application for analyzing financial transactions
 
 **Built with Python, Streamlit, pandas, machine learning, and Git.**
 
-[Live Demo](https://cua-mda-aml-prediction.streamlit.app/) · [GitHub Repository](https://github.com/KOJOPINTO/AI_Fraud_Detection)
+[Live Demo](https://kojo-pinto-fraud-detection.streamlit.app/) · [GitHub Repository](https://github.com/KOJOPINTO/AI_Fraud_Detection)
 
 ## Project Overview
 
